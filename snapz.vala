@@ -90,7 +90,7 @@ class ShotCanvas : Gtk.DrawingArea {
 
 		//stdout.printf("w %d h %d\n", width, height);
 		pixbuf_scaled = pixbuf.scale_simple(width, height,
-											Gdk.InterpType.BILINEAR);
+											Gdk.InterpType.TILES);
 	}
 
 	private bool draw(Gdk.EventExpose expose) {
