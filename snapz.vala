@@ -29,6 +29,14 @@ Gdk.Pixbuf* pixbuf_from_surface(Cairo.ImageSurface surface) {
                                     (PixbufDestroyNotify)g_free);
 }
 
+// Clamp x such that min <= x < max.
+int clamp(int x, int min, int max) {
+    if (x < min)
+        return min;
+    if (x >= max)
+        return max - 1;
+    return x;
+}
 
 // ShotCanvas is the main widget in the window, letting you select
 // regions of and crop the image.  It's rooted in an AspectFrame
@@ -57,6 +65,7 @@ class ShotCanvas : Gtk.AspectFrame {
                 sel_start = canvas_to_image(Gdk.Point() {
                         x = (int)event.x, y = (int)event.y
                     });
+                clamp_point(ref sel_start);
                 sel_end = sel_start;
                 selection_changed();
             });
@@ -64,14 +73,28 @@ class ShotCanvas : Gtk.AspectFrame {
                 sel_end = canvas_to_image(Gdk.Point() {
                         x = (int)event.x, y = (int)event.y
                     });
+                clamp_point(ref sel_end);
                 selection_changed();
             });
         canvas.button_release_event.connect((event) => {
                 sel_end = canvas_to_image(Gdk.Point() {
                         x = (int)event.x, y = (int)event.y
                     });
+                clamp_point(ref sel_end);
                 if (sel_end.x == sel_start.x && sel_end.y == sel_start.y)
                     sel_start.x = -1;
+                else {
+                    if (sel_end.x < sel_start.x) {
+                        var t = sel_start.x;
+                        sel_start.x = sel_end.x;
+                        sel_end.x = t;
+                    }
+                    if (sel_end.y < sel_start.y) {
+                        var t = sel_start.y;
+                        sel_start.y = sel_end.y;
+                        sel_end.y = t;
+                    }
+                }
                 selection_changed();
             });
 
@@ -123,6 +146,11 @@ class ShotCanvas : Gtk.AspectFrame {
         selection_changed();
     }
 
+    // Clamp a point to the bounds of the image.
+    private void clamp_point(ref Gdk.Point p) {
+        p.x = clamp(p.x, 0, pixbuf.get_width());
+        p.y = clamp(p.y, 0, pixbuf.get_height());
+    }
 
     // Multiply the x/y coords of point |p| by |mult|.
     private Gdk.Point scale_point(Gdk.Point p, float mult) {
