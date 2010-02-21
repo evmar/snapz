@@ -5,4 +5,4 @@ snapz: snapz.vala
 
 .PHONY: debug
 debug: snapz.vala
-	valac -g --pkg gtk+-2.0 snapz.vala
+	valac -g --save-temps --pkg gtk+-2.0 snapz.vala
