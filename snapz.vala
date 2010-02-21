@@ -67,8 +67,8 @@ class ShotCanvas : Gtk.AspectFrame {
 
 	private Gdk.Point scale_point(Gdk.Point p, float mult) {
 		return Gdk.Point() {
-			x = (int)(p.x * mult),
-			y = (int)(p.y * mult)
+			x = (int)Math.round(p.x * mult),
+			y = (int)Math.round(p.y * mult)
 		};
 	}
 
