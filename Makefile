@@ -7,4 +7,4 @@ debug: snapz.vala
 	valac -g --save-temps --pkg gtk+-2.0 snapz.vala
 
 opt: snapz.vala
-	valac --pkg gtk+-2.0 snapz.vala
+	valac --Xcc=-O2 --pkg gtk+-2.0 snapz.vala
