@@ -3,8 +3,32 @@ using Gtk;
 
 class ShotCanvas : Gtk.DrawingArea {
 	public ShotCanvas(Gdk.Pixbuf pixbuf) {
+		add_events(Gdk.EventMask.BUTTON_PRESS_MASK |
+				   Gdk.EventMask.BUTTON1_MOTION_MASK |
+				   Gdk.EventMask.BUTTON_RELEASE_MASK);
+
 		this.pixbuf = pixbuf;
 		this.pixbuf_scaled = null;
+
+		this.button_press_event.connect((event) => {
+				sel_start = canvas_to_image(Gdk.Point() {
+						x = (int)event.x, y = (int)event.y
+					});
+				sel_end = sel_start;
+				selection_changed();
+			});
+		this.motion_notify_event.connect((event) => {
+				sel_end = canvas_to_image(Gdk.Point() {
+						x = (int)event.x, y = (int)event.y
+					});
+				selection_changed();
+			});
+		this.button_release_event.connect((event) => {
+				sel_end = canvas_to_image(Gdk.Point() {
+						x = (int)event.x, y = (int)event.y
+					});
+				selection_changed();
+			});
 
 		expose_event.connect(draw);
 	}
@@ -13,6 +37,24 @@ class ShotCanvas : Gtk.DrawingArea {
 		pixbuf.save(filename, "png", null);
 	}
 
+
+	private Gdk.Point scale_point(Gdk.Point p, float mult) {
+		return Gdk.Point() {
+			x = (int)(p.x * mult),
+			y = (int)(p.y * mult)
+		};
+	}
+
+	private Gdk.Point canvas_to_image(Gdk.Point p) {
+		return scale_point(p, pixbuf.get_width() / (float)allocation.width);
+	}
+	private Gdk.Point image_to_canvas(Gdk.Point p) {
+		return scale_point(p, allocation.width / (float)pixbuf.get_width());
+	}
+
+	private void selection_changed() {
+		queue_draw();
+	}
 
 	private void rescale_if_necessary() {
 		var aspect = pixbuf.get_width() / (float)pixbuf.get_height();
@@ -47,6 +89,26 @@ class ShotCanvas : Gtk.DrawingArea {
 		var ctx = Gdk.cairo_create(window);
 		Gdk.cairo_set_source_pixbuf(ctx, pixbuf_scaled, 0, 0);
 		ctx.paint();
+
+		if (sel_start.x != -1) {
+			var start = image_to_canvas(sel_start);
+			var end = image_to_canvas(sel_end);
+
+			ctx.translate(0.5, 0.5);
+			ctx.set_line_width(1);
+
+			ctx.set_source_rgb(0, 0, 0);
+			ctx.rectangle(start.x, start.y,
+						  end.x - start.x, end.y - start.y);
+			ctx.stroke();
+
+			ctx.set_source_rgb(1, 1, 1);
+			ctx.set_dash({5, 5}, 0);
+			ctx.rectangle(start.x, start.y,
+						  end.x - start.x, end.y - start.y);
+			ctx.stroke();
+		}
+
 		return true;
 	}
 
@@ -54,6 +116,10 @@ class ShotCanvas : Gtk.DrawingArea {
 	private Gdk.Pixbuf pixbuf;
 	// Image scaled to current available space.
 	private Gdk.Pixbuf? pixbuf_scaled;
+
+	// Current selection, if any.
+	private Gdk.Point sel_start;
+	private Gdk.Point sel_end;
 }
 
 class SnapzWin : Gtk.Window {
