@@ -57,7 +57,9 @@ class ShotCanvas : Gtk.AspectFrame {
 
     // Return true if there is a region currently selected.
     public bool has_selection() {
-        return sel_start.x != -1;
+        return sel_start.x != -1 &&
+            (sel_start.x != sel_end.x ||
+             sel_start.y != sel_end.y);
     }
 
     // A signal that's fired whenever the selection changes.
