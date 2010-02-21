@@ -48,6 +48,10 @@ class ShotCanvas : Gtk.AspectFrame {
         canvas.add_events(Gdk.EventMask.BUTTON_PRESS_MASK |
                           Gdk.EventMask.BUTTON1_MOTION_MASK |
                           Gdk.EventMask.BUTTON_RELEASE_MASK);
+        canvas.realize.connect(() => {
+                canvas.window.set_cursor(
+                        new Gdk.Cursor(Gdk.CursorType.CROSSHAIR));
+            });
 
         canvas.button_press_event.connect((event) => {
                 sel_start = canvas_to_image(Gdk.Point() {
