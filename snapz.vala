@@ -4,6 +4,32 @@
 using Gdk;
 using Gtk;
 
+
+Gdk.Pixbuf* pixbuf_from_surface(Cairo.ImageSurface surface) {
+    // Gdk.Pixbuf wants 24-bit RGB, but the Cairo RGB24 format
+    // still produces 32-bit pixels where one byte is unused.  So
+    // we must swizzle here.
+    uchar* rgb32 = surface.get_data();
+    var width = surface.get_width();
+    var height = surface.get_height();
+    var stride = surface.get_stride();
+    uchar* rgb24 = malloc(width * height * 3);
+    uchar* dst = rgb24;
+    for (var y = 0; y < height; ++y) {
+        uint32* src = (uint32*) (rgb32 + (y * stride));
+        for (var x = 0; x < width; ++x) {
+            *dst++ = src[x] >> 16;
+            *dst++ = src[x] >> 8;
+            *dst++ = src[x];
+        }
+    }
+
+    return new Gdk.Pixbuf.from_data((uchar[])rgb24, Gdk.Colorspace.RGB, false,
+                                    8, width, height, width*3,
+                                    (PixbufDestroyNotify)g_free);
+}
+
+
 // ShotCanvas is the main widget in the window, letting you select
 // regions of and crop the image.  It's rooted in an AspectFrame
 // so it can maintain the correct aspect ratio regardless of the
@@ -76,6 +102,25 @@ class ShotCanvas : Gtk.AspectFrame {
         this.ratio = pixbuf.get_width() / (float)pixbuf.get_height();
     }
 
+    // Highlight the current selection by darkening the rest of the image.
+    public void highlight() {
+        var width = pixbuf.get_width();
+        var height = pixbuf.get_height();
+
+        var surface = new Cairo.ImageSurface(Cairo.Format.RGB24, width, height);
+        var ctx = new Cairo.Context(surface);
+        Gdk.cairo_set_source_pixbuf(ctx, pixbuf, 0, 0);
+        ctx.paint();
+
+        draw_mask(ctx, 0.2f, width, height,
+                  sel_start.x, sel_start.y, sel_end.x, sel_end.y);
+
+        pixbuf = pixbuf_from_surface(surface);
+        pixbuf_scaled = null;
+        sel_start.x = -1;
+        selection_changed();
+    }
+
 
     // Multiply the x/y coords of point |p| by |mult|.
     private Gdk.Point scale_point(Gdk.Point p, float mult) {
@@ -111,6 +156,23 @@ class ShotCanvas : Gtk.AspectFrame {
                                             Gdk.InterpType.TILES);
     }
 
+    // Darken all of the image except for the designated rectangle.
+    private void draw_mask(Cairo.Context ctx, float alpha,
+                           int width, int height,
+                           float x1, float y1, float x2, float y2) {
+        var mask = new Cairo.Surface.similar(ctx.get_target(),
+                                             Cairo.Content.ALPHA,
+                                             width, height);
+        var mask_ctx = new Cairo.Context(mask);
+        mask_ctx.set_source_rgba(0, 0, 0, alpha);
+        mask_ctx.paint();
+        mask_ctx.set_operator(Cairo.Operator.CLEAR);
+        mask_ctx.rectangle(x1, y1, x2-x1, y2-y1);
+        mask_ctx.fill();
+        ctx.set_source_surface(mask, 0, 0);
+        ctx.paint();
+    }
+
     // Redraw the the current contents.
     private bool draw(Gdk.EventExpose expose) {
         if (canvas.allocation.width == 1 || canvas.allocation.height == 1) {
@@ -131,20 +193,9 @@ class ShotCanvas : Gtk.AspectFrame {
             var end = image_to_canvas(sel_end);
 
             // Cut out the selected region from a mask and apply it.
-            var mask = new Cairo.Surface.similar(ctx.get_target(),
-                                                 Cairo.Content.ALPHA,
-                                                 canvas.allocation.width,
-                                                 canvas.allocation.height);
-            var mask_ctx = new Cairo.Context(mask);
-            mask_ctx.set_source_rgba(0, 0, 0, 0.1);
-            mask_ctx.paint();
-            mask_ctx.translate(0.5, 0.5);
-            mask_ctx.set_operator(Cairo.Operator.CLEAR);
-            mask_ctx.rectangle(start.x, start.y,
-                               end.x - start.x, end.y - start.y);
-            mask_ctx.fill();
-            ctx.set_source_surface(mask, 0, 0);
-            ctx.paint();
+            draw_mask(ctx, 0.1f,
+                      canvas.allocation.width, canvas.allocation.height,
+                      start.x, start.y, end.x, end.y);
 
             // Draw the dotted line around the selection.
             ctx.translate(0.5, 0.5);
@@ -191,21 +242,33 @@ class SnapzWin : Gtk.Window {
         vbox.pack_start(canvas, true, true, 0);
 
         var bbox = new Gtk.HButtonBox();
-        bbox.layout_style = Gtk.ButtonBoxStyle.EDGE;
+        bbox.layout_style = Gtk.ButtonBoxStyle.START;
 
-        this.crop_button = new Gtk.Button.with_mnemonic("_Crop");
-        crop_button.set_sensitive(false);
-        canvas.selection_changed.connect(() => {
-                crop_button.set_sensitive(canvas.has_selection());
-            });
+        var crop_button = new Gtk.Button.with_mnemonic("_Crop");
         crop_button.clicked.connect(() => {
                 canvas.crop();
             });
-        bbox.add(crop_button);
+        bbox.pack_start(crop_button, false, false, 0);
+
+        var highlight_button = new Gtk.Button.with_mnemonic("_Highlight");
+        highlight_button.clicked.connect(() => {
+                canvas.highlight();
+            });
+        bbox.pack_start(highlight_button, false, false, 0);
+
+        this.selection_buttons = { crop_button, highlight_button };
+        foreach (var button in selection_buttons) {
+            button.set_sensitive(false);
+        }
+        canvas.selection_changed.connect(() => {
+                foreach (var button in selection_buttons)
+                    button.set_sensitive(canvas.has_selection());
+            });
 
         var save_button = new Gtk.Button.with_mnemonic("_Save");
         save_button.clicked.connect(save);
         bbox.pack_end(save_button, false, false, 0);
+        bbox.set_child_secondary(save_button, true);
 
         vbox.pack_start(bbox, false, false, 0);
 
@@ -236,8 +299,8 @@ class SnapzWin : Gtk.Window {
     // The canvas widget.
     private ShotCanvas canvas;
 
-    // This must be a member for the selection_changed closure to work(!).
-    private Gtk.Button crop_button;
+    // Buttons that become insensitive when there is no selection.
+    private Gtk.Button[] selection_buttons;
 }
 
 // Take a screenshot and return the pixbuf.
