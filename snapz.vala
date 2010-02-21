@@ -1,6 +1,13 @@
+// Snapz -- simple screenshot app.
+// Copyright (c) 2010 Evan Martin.  All rights reserved.
+
 using Gdk;
 using Gtk;
 
+// ShotCanvas is the main widget in the window, letting you select
+// regions of and crop the image.  It's rooted in an AspectFrame
+// so it can maintain the correct aspect ratio regardless of the
+// window size.
 class ShotCanvas : Gtk.AspectFrame {
     public ShotCanvas(Gdk.Pixbuf pixbuf) {
         this.obey_child = false;
@@ -43,17 +50,20 @@ class ShotCanvas : Gtk.AspectFrame {
         add(canvas);
     }
 
+    // Save the image to a file.
     public void save(string filename) throws GLib.Error {
         pixbuf.save(filename, "png", null);
     }
 
+    // Return true if there is a region currently selected.
     public bool has_selection() {
         return sel_start.x != -1;
     }
 
+    // A signal that's fired whenever the selection changes.
     public signal void selection_changed();
 
-
+    // Crop the image to the current selection.
     public void crop() {
         pixbuf = new Gdk.Pixbuf.subpixbuf(pixbuf, sel_start.x, sel_start.y,
                                           sel_end.x - sel_start.x,
@@ -65,6 +75,7 @@ class ShotCanvas : Gtk.AspectFrame {
     }
 
 
+    // Multiply the x/y coords of point |p| by |mult|.
     private Gdk.Point scale_point(Gdk.Point p, float mult) {
         return Gdk.Point() {
             x = (int)Math.round(p.x * mult),
@@ -72,15 +83,18 @@ class ShotCanvas : Gtk.AspectFrame {
         };
     }
 
+    // Convert from canvas (scaled-down, on screen) space to image space.
     private Gdk.Point canvas_to_image(Gdk.Point p) {
         return scale_point(p,
                            pixbuf.get_width() / (float)canvas.allocation.width);
     }
+    // Convert from image (underlying hi-res image) space to canvas space.
     private Gdk.Point image_to_canvas(Gdk.Point p) {
         return scale_point(p,
                            canvas.allocation.width / (float)pixbuf.get_width());
     }
 
+    // Recompute |pixbuf_scaled|, the scaled version of |pixbuf|, if needed.
     private void rescale_if_necessary() {
         var width = canvas.allocation.width;
         var height = canvas.allocation.height;
@@ -91,11 +105,11 @@ class ShotCanvas : Gtk.AspectFrame {
             return;
         }
 
-        //stdout.printf("w %d h %d\n", width, height);
         pixbuf_scaled = pixbuf.scale_simple(width, height,
                                             Gdk.InterpType.TILES);
     }
 
+    // Redraw the the current contents.
     private bool draw(Gdk.EventExpose expose) {
         if (canvas.allocation.width == 1 || canvas.allocation.height == 1) {
             // On startup we get a 1x1 expose which makes the scaling
@@ -106,6 +120,7 @@ class ShotCanvas : Gtk.AspectFrame {
         rescale_if_necessary();
 
         var ctx = Gdk.cairo_create(canvas.window);
+        // Start by drawing the image into the context.
         Gdk.cairo_set_source_pixbuf(ctx, pixbuf_scaled, 0, 0);
         ctx.paint();
 
@@ -113,6 +128,7 @@ class ShotCanvas : Gtk.AspectFrame {
             var start = image_to_canvas(sel_start);
             var end = image_to_canvas(sel_end);
 
+            // Cut out the selected region from a mask and apply it.
             var mask = new Cairo.Surface.similar(ctx.get_target(),
                                                  Cairo.Content.ALPHA,
                                                  canvas.allocation.width,
@@ -125,18 +141,18 @@ class ShotCanvas : Gtk.AspectFrame {
             mask_ctx.rectangle(start.x, start.y,
                                end.x - start.x, end.y - start.y);
             mask_ctx.fill();
-
             ctx.set_source_surface(mask, 0, 0);
             ctx.paint();
 
+            // Draw the dotted line around the selection.
             ctx.translate(0.5, 0.5);
             ctx.set_line_width(1);
-
+            // First draw a black background for the line.
             ctx.set_source_rgb(0, 0, 0);
             ctx.rectangle(start.x, start.y,
                           end.x - start.x, end.y - start.y);
             ctx.stroke();
-
+            // Then draw white dashes.
             ctx.set_source_rgb(1, 1, 1);
             ctx.set_dash({5, 5}, 0);
             ctx.rectangle(start.x, start.y,
@@ -152,30 +168,30 @@ class ShotCanvas : Gtk.AspectFrame {
     // Image scaled to current available space.
     private Gdk.Pixbuf? pixbuf_scaled;
 
+    // The actual widget we draw on.
     private Gtk.DrawingArea canvas;
 
     // Current selection, if any.
+    // sel_start.x == -1 indicates no selection.
     private Gdk.Point sel_start;
     private Gdk.Point sel_end;
 }
 
+// The main window, containing the canvas and buttons to operate on it.
 class SnapzWin : Gtk.Window {
-    private ShotCanvas canvas;
-    private Gtk.Button crop_button;
-
     public SnapzWin(Gdk.Pixbuf shot) {
         title = "Snapz";
 
         var vbox = new Gtk.VBox(false, 12);
         vbox.border_width = 12;
 
-        canvas = new ShotCanvas(shot);
+        this.canvas = new ShotCanvas(shot);
         vbox.pack_start(canvas, true, true, 0);
 
         var bbox = new Gtk.HButtonBox();
         bbox.layout_style = Gtk.ButtonBoxStyle.EDGE;
 
-        crop_button = new Gtk.Button.with_mnemonic("_Crop");
+        this.crop_button = new Gtk.Button.with_mnemonic("_Crop");
         crop_button.set_sensitive(false);
         canvas.selection_changed.connect(() => {
                 crop_button.set_sensitive(canvas.has_selection());
@@ -214,14 +230,20 @@ class SnapzWin : Gtk.Window {
         }
         dialog.destroy();
     }
+
+    // The canvas widget.
+    private ShotCanvas canvas;
+
+    // This must be a member for the selection_changed closure to work(!).
+    private Gtk.Button crop_button;
 }
 
+// Take a screenshot and return the pixbuf.
 Gdk.Pixbuf screenshot() {
     var screen = Gdk.Screen.get_default();
-    var shot = Gdk.pixbuf_get_from_drawable(
+    return Gdk.pixbuf_get_from_drawable(
         null, screen.get_root_window(), null, 0, 0,
         0, 0, screen.get_width(), screen.get_height());
-    return shot;
 }
 
 int main(string[] args) {
