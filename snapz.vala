@@ -113,6 +113,22 @@ class ShotCanvas : Gtk.AspectFrame {
 			var start = image_to_canvas(sel_start);
 			var end = image_to_canvas(sel_end);
 
+			var mask = new Cairo.Surface.similar(ctx.get_target(),
+												 Cairo.Content.ALPHA,
+												 canvas.allocation.width,
+												 canvas.allocation.height);
+			var mask_ctx = new Cairo.Context(mask);
+			mask_ctx.set_source_rgba(0, 0, 0, 0.1);
+			mask_ctx.paint();
+			mask_ctx.translate(0.5, 0.5);
+			mask_ctx.set_operator(Cairo.Operator.CLEAR);
+			mask_ctx.rectangle(start.x, start.y,
+							   end.x - start.x, end.y - start.y);
+			mask_ctx.fill();
+
+			ctx.set_source_surface(mask, 0, 0);
+			ctx.paint();
+
 			ctx.translate(0.5, 0.5);
 			ctx.set_line_width(1);
 
