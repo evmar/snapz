@@ -9,6 +9,7 @@ class ShotCanvas : Gtk.DrawingArea {
 
 		this.pixbuf = pixbuf;
 		this.pixbuf_scaled = null;
+		this.sel_start.x = -1;
 
 		this.button_press_event.connect((event) => {
 				sel_start = canvas_to_image(Gdk.Point() {
@@ -27,14 +28,33 @@ class ShotCanvas : Gtk.DrawingArea {
 				sel_end = canvas_to_image(Gdk.Point() {
 						x = (int)event.x, y = (int)event.y
 					});
+				if (sel_end.x == sel_start.x && sel_end.y == sel_start.y)
+					sel_start.x = -1;
 				selection_changed();
 			});
 
 		expose_event.connect(draw);
+		selection_changed.connect(() => { queue_draw(); });
 	}
 
 	public void save(string filename) throws GLib.Error {
 		pixbuf.save(filename, "png", null);
+	}
+
+	public bool has_selection() {
+		return sel_start.x != -1;
+	}
+
+	public signal void selection_changed();
+
+
+	public void crop() {
+		pixbuf = new Gdk.Pixbuf.subpixbuf(pixbuf, sel_start.x, sel_start.y,
+										  sel_end.x - sel_start.x,
+										  sel_end.y - sel_start.y);
+		pixbuf_scaled = null;
+		sel_start.x = -1;
+		selection_changed();
 	}
 
 
@@ -50,10 +70,6 @@ class ShotCanvas : Gtk.DrawingArea {
 	}
 	private Gdk.Point image_to_canvas(Gdk.Point p) {
 		return scale_point(p, allocation.width / (float)pixbuf.get_width());
-	}
-
-	private void selection_changed() {
-		queue_draw();
 	}
 
 	private void rescale_if_necessary() {
@@ -90,7 +106,7 @@ class ShotCanvas : Gtk.DrawingArea {
 		Gdk.cairo_set_source_pixbuf(ctx, pixbuf_scaled, 0, 0);
 		ctx.paint();
 
-		if (sel_start.x != -1) {
+		if (has_selection()) {
 			var start = image_to_canvas(sel_start);
 			var end = image_to_canvas(sel_end);
 
@@ -124,27 +140,38 @@ class ShotCanvas : Gtk.DrawingArea {
 
 class SnapzWin : Gtk.Window {
 	private ShotCanvas canvas;
+	private Gtk.Button crop_button;
 
 	public SnapzWin(Gdk.Pixbuf shot) {
 		title = "Snapz";
 
-		var hbox = new Gtk.HBox(false, 12);
-		hbox.border_width = 12;
+		var vbox = new Gtk.VBox(false, 12);
+		vbox.border_width = 12;
 
 		canvas = new ShotCanvas(shot);
-		hbox.pack_start(canvas, true, true, 0);
+		vbox.pack_start(canvas, true, true, 0);
 
-		var bbox = new Gtk.VButtonBox();
-		bbox.layout_style = Gtk.ButtonBoxStyle.START;
+		var bbox = new Gtk.HButtonBox();
+		bbox.layout_style = Gtk.ButtonBoxStyle.EDGE;
+
+		crop_button = new Gtk.Button.with_mnemonic("_Crop");
+		crop_button.set_sensitive(false);
+		canvas.selection_changed.connect(() => {
+				crop_button.set_sensitive(canvas.has_selection());
+			});
+		crop_button.clicked.connect(() => {
+				canvas.crop();
+			});
+		bbox.add(crop_button);
 
 		var save_button = new Gtk.Button.with_mnemonic("_Save");
 		save_button.clicked.connect(save);
-		bbox.add(save_button);
+		bbox.pack_end(save_button, false, false, 0);
 
-		hbox.pack_start(bbox, false, false, 0);
+		vbox.pack_start(bbox, false, false, 0);
 
-		add(hbox);
-		hbox.show_all();
+		add(vbox);
+		vbox.show_all();
 
 		destroy.connect(Gtk.main_quit);
 	}
