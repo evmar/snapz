@@ -264,6 +264,7 @@ class ShotCanvas : Gtk.AspectFrame {
 class SnapzWin : Gtk.Window {
     public SnapzWin(Gdk.Pixbuf shot) {
         title = "Snapz";
+        set_default_size(shot.get_width() / 2, shot.get_height() / 2);
 
         var vbox = new Gtk.VBox(false, 12);
         vbox.border_width = 12;

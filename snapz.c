@@ -762,7 +762,7 @@ GType shot_canvas_get_type (void) {
 
 
 static void _lambda5_ (SnapzWin* self) {
-#line 279 "snapz.vala"
+#line 280 "snapz.vala"
 	shot_canvas_crop (self->priv->canvas);
 #line 768 "snapz.c"
 }
@@ -774,7 +774,7 @@ static void __lambda5__gtk_button_clicked (GtkButton* _sender, gpointer self) {
 
 
 static void _lambda6_ (SnapzWin* self) {
-#line 285 "snapz.vala"
+#line 286 "snapz.vala"
 	shot_canvas_highlight (self->priv->canvas);
 #line 780 "snapz.c"
 }
@@ -790,7 +790,7 @@ static void _lambda7_ (SnapzWin* self) {
 		GtkButton** button_collection;
 		int button_collection_length1;
 		int button_it;
-#line 294 "snapz.vala"
+#line 295 "snapz.vala"
 		button_collection = self->priv->selection_buttons;
 #line 796 "snapz.c"
 		button_collection_length1 = self->priv->selection_buttons_length1;
@@ -798,7 +798,7 @@ static void _lambda7_ (SnapzWin* self) {
 			GtkButton* button;
 			button = _g_object_ref0 (button_collection[button_it]);
 			{
-#line 295 "snapz.vala"
+#line 296 "snapz.vala"
 				gtk_widget_set_sensitive ((GtkWidget*) button, shot_canvas_has_selection (self->priv->canvas));
 #line 804 "snapz.c"
 				_g_object_unref0 (button);
@@ -813,7 +813,7 @@ static void __lambda7__shot_canvas_selection_changed (ShotCanvas* _sender, gpoin
 }
 
 
-#line 311 "snapz.vala"
+#line 312 "snapz.vala"
 static void _snapz_win_save_gtk_button_clicked (GtkButton* _sender, gpointer self) {
 #line 819 "snapz.c"
 	snapz_win_save (self);
@@ -845,73 +845,75 @@ SnapzWin* snapz_win_construct (GType object_type, GdkPixbuf* shot) {
 	self = g_object_newv (object_type, 0, NULL);
 #line 266 "snapz.vala"
 	gtk_window_set_title ((GtkWindow*) self, "Snapz");
-#line 849 "snapz.c"
+#line 267 "snapz.vala"
+	gtk_window_set_default_size ((GtkWindow*) self, gdk_pixbuf_get_width (shot) / 2, gdk_pixbuf_get_height (shot) / 2);
+#line 851 "snapz.c"
 	vbox = g_object_ref_sink ((GtkVBox*) gtk_vbox_new (FALSE, 12));
-#line 269 "snapz.vala"
+#line 270 "snapz.vala"
 	gtk_container_set_border_width ((GtkContainer*) vbox, (guint) 12);
-#line 271 "snapz.vala"
-	self->priv->canvas = (_tmp0_ = g_object_ref_sink (shot_canvas_new (shot)), _g_object_unref0 (self->priv->canvas), _tmp0_);
 #line 272 "snapz.vala"
+	self->priv->canvas = (_tmp0_ = g_object_ref_sink (shot_canvas_new (shot)), _g_object_unref0 (self->priv->canvas), _tmp0_);
+#line 273 "snapz.vala"
 	gtk_box_pack_start ((GtkBox*) vbox, (GtkWidget*) self->priv->canvas, TRUE, TRUE, (guint) 0);
-#line 857 "snapz.c"
+#line 859 "snapz.c"
 	bbox = g_object_ref_sink ((GtkHButtonBox*) gtk_hbutton_box_new ());
-#line 275 "snapz.vala"
+#line 276 "snapz.vala"
 	g_object_set ((GtkButtonBox*) bbox, "layout-style", GTK_BUTTONBOX_START, NULL);
-#line 861 "snapz.c"
+#line 863 "snapz.c"
 	crop_button = g_object_ref_sink ((GtkButton*) gtk_button_new_with_mnemonic ("_Crop"));
-#line 278 "snapz.vala"
+#line 279 "snapz.vala"
 	g_signal_connect_object (crop_button, "clicked", (GCallback) __lambda5__gtk_button_clicked, self, 0);
-#line 281 "snapz.vala"
+#line 282 "snapz.vala"
 	gtk_box_pack_start ((GtkBox*) bbox, (GtkWidget*) crop_button, FALSE, FALSE, (guint) 0);
-#line 867 "snapz.c"
+#line 869 "snapz.c"
 	highlight_button = g_object_ref_sink ((GtkButton*) gtk_button_new_with_mnemonic ("_Highlight"));
-#line 284 "snapz.vala"
+#line 285 "snapz.vala"
 	g_signal_connect_object (highlight_button, "clicked", (GCallback) __lambda6__gtk_button_clicked, self, 0);
-#line 287 "snapz.vala"
+#line 288 "snapz.vala"
 	gtk_box_pack_start ((GtkBox*) bbox, (GtkWidget*) highlight_button, FALSE, FALSE, (guint) 0);
-#line 289 "snapz.vala"
+#line 290 "snapz.vala"
 	_tmp1_ = NULL;
-#line 289 "snapz.vala"
+#line 290 "snapz.vala"
 	self->priv->selection_buttons = (_tmp2_ = (_tmp1_ = g_new0 (GtkButton*, 2 + 1), _tmp1_[0] = _g_object_ref0 (crop_button), _tmp1_[1] = _g_object_ref0 (highlight_button), _tmp1_), self->priv->selection_buttons = (_vala_array_free (self->priv->selection_buttons, self->priv->selection_buttons_length1, (GDestroyNotify) g_object_unref), NULL), self->priv->selection_buttons_length1 = 2, self->priv->selection_buttons_size = self->priv->selection_buttons_length1, _tmp2_);
-#line 877 "snapz.c"
+#line 879 "snapz.c"
 	{
 		GtkButton** button_collection;
 		int button_collection_length1;
 		int button_it;
-#line 290 "snapz.vala"
+#line 291 "snapz.vala"
 		button_collection = self->priv->selection_buttons;
-#line 884 "snapz.c"
+#line 886 "snapz.c"
 		button_collection_length1 = self->priv->selection_buttons_length1;
 		for (button_it = 0; button_it < self->priv->selection_buttons_length1; button_it = button_it + 1) {
 			GtkButton* button;
 			button = _g_object_ref0 (button_collection[button_it]);
 			{
-#line 291 "snapz.vala"
+#line 292 "snapz.vala"
 				gtk_widget_set_sensitive ((GtkWidget*) button, FALSE);
-#line 892 "snapz.c"
+#line 894 "snapz.c"
 				_g_object_unref0 (button);
 			}
 		}
 	}
-#line 293 "snapz.vala"
+#line 294 "snapz.vala"
 	g_signal_connect_object (self->priv->canvas, "selection-changed", (GCallback) __lambda7__shot_canvas_selection_changed, self, 0);
-#line 899 "snapz.c"
+#line 901 "snapz.c"
 	save_button = g_object_ref_sink ((GtkButton*) gtk_button_new_with_mnemonic ("_Save"));
-#line 299 "snapz.vala"
-	g_signal_connect_object (save_button, "clicked", (GCallback) _snapz_win_save_gtk_button_clicked, self, 0);
 #line 300 "snapz.vala"
-	gtk_box_pack_end ((GtkBox*) bbox, (GtkWidget*) save_button, FALSE, FALSE, (guint) 0);
+	g_signal_connect_object (save_button, "clicked", (GCallback) _snapz_win_save_gtk_button_clicked, self, 0);
 #line 301 "snapz.vala"
+	gtk_box_pack_end ((GtkBox*) bbox, (GtkWidget*) save_button, FALSE, FALSE, (guint) 0);
+#line 302 "snapz.vala"
 	gtk_button_box_set_child_secondary ((GtkButtonBox*) bbox, (GtkWidget*) save_button, TRUE);
-#line 303 "snapz.vala"
+#line 304 "snapz.vala"
 	gtk_box_pack_start ((GtkBox*) vbox, (GtkWidget*) bbox, FALSE, FALSE, (guint) 0);
-#line 305 "snapz.vala"
-	gtk_container_add ((GtkContainer*) self, (GtkWidget*) vbox);
 #line 306 "snapz.vala"
+	gtk_container_add ((GtkContainer*) self, (GtkWidget*) vbox);
+#line 307 "snapz.vala"
 	gtk_widget_show_all ((GtkWidget*) vbox);
-#line 308 "snapz.vala"
+#line 309 "snapz.vala"
 	g_signal_connect ((GtkObject*) self, "destroy", (GCallback) _gtk_main_quit_gtk_object_destroy, NULL);
-#line 915 "snapz.c"
+#line 917 "snapz.c"
 	_g_object_unref0 (vbox);
 	_g_object_unref0 (bbox);
 	_g_object_unref0 (crop_button);
@@ -925,33 +927,33 @@ SnapzWin* snapz_win_construct (GType object_type, GdkPixbuf* shot) {
 SnapzWin* snapz_win_new (GdkPixbuf* shot) {
 #line 265 "snapz.vala"
 	return snapz_win_construct (TYPE_SNAPZ_WIN, shot);
-#line 929 "snapz.c"
+#line 931 "snapz.c"
 }
 
 
-#line 311 "snapz.vala"
+#line 312 "snapz.vala"
 static void snapz_win_save (SnapzWin* self) {
-#line 935 "snapz.c"
+#line 937 "snapz.c"
 	GError * _inner_error_;
 	GtkFileChooserDialog* dialog;
 	gint response;
-#line 311 "snapz.vala"
+#line 312 "snapz.vala"
 	g_return_if_fail (self != NULL);
-#line 941 "snapz.c"
+#line 943 "snapz.c"
 	_inner_error_ = NULL;
 	dialog = g_object_ref_sink ((GtkFileChooserDialog*) gtk_file_chooser_dialog_new (NULL, (GtkWindow*) self, GTK_FILE_CHOOSER_ACTION_SAVE, GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_OK, GTK_RESPONSE_OK, NULL, NULL));
-#line 317 "snapz.vala"
+#line 318 "snapz.vala"
 	gtk_file_chooser_set_current_name ((GtkFileChooser*) dialog, "Screenshot.png");
-#line 946 "snapz.c"
+#line 948 "snapz.c"
 	response = gtk_dialog_run ((GtkDialog*) dialog);
-#line 319 "snapz.vala"
+#line 320 "snapz.vala"
 	if (response == GTK_RESPONSE_OK) {
-#line 950 "snapz.c"
+#line 952 "snapz.c"
 		{
 			char* _tmp0_;
-#line 321 "snapz.vala"
+#line 322 "snapz.vala"
 			shot_canvas_save (self->priv->canvas, _tmp0_ = gtk_file_chooser_get_filename ((GtkFileChooser*) dialog), &_inner_error_);
-#line 955 "snapz.c"
+#line 957 "snapz.c"
 			if (_inner_error_ != NULL) {
 				goto __catch0_g_error;
 				goto __finally0;
@@ -976,9 +978,9 @@ static void snapz_win_save (SnapzWin* self) {
 			return;
 		}
 	}
-#line 326 "snapz.vala"
+#line 327 "snapz.vala"
 	gtk_object_destroy ((GtkObject*) dialog);
-#line 982 "snapz.c"
+#line 984 "snapz.c"
 	_g_object_unref0 (dialog);
 }
 
@@ -1014,9 +1016,9 @@ GType snapz_win_get_type (void) {
 }
 
 
-#line 337 "snapz.vala"
+#line 338 "snapz.vala"
 GdkPixbuf* screenshot (void) {
-#line 1020 "snapz.c"
+#line 1022 "snapz.c"
 	GdkPixbuf* result;
 	GdkScreen* screen;
 	screen = _g_object_ref0 (gdk_screen_get_default ());
@@ -1026,22 +1028,22 @@ GdkPixbuf* screenshot (void) {
 }
 
 
-#line 344 "snapz.vala"
+#line 345 "snapz.vala"
 gint _main (char** args, int args_length1) {
-#line 1032 "snapz.c"
+#line 1034 "snapz.c"
 	gint result;
 	GdkPixbuf* shot;
 	SnapzWin* win;
-#line 345 "snapz.vala"
+#line 346 "snapz.vala"
 	gtk_init (&args_length1, &args);
-#line 1038 "snapz.c"
+#line 1040 "snapz.c"
 	shot = screenshot ();
 	win = g_object_ref_sink (snapz_win_new (shot));
-#line 349 "snapz.vala"
-	gtk_widget_show ((GtkWidget*) win);
 #line 350 "snapz.vala"
+	gtk_widget_show ((GtkWidget*) win);
+#line 351 "snapz.vala"
 	gtk_main ();
-#line 1045 "snapz.c"
+#line 1047 "snapz.c"
 	result = 0;
 	_g_object_unref0 (shot);
 	_g_object_unref0 (win);
@@ -1049,13 +1051,13 @@ gint _main (char** args, int args_length1) {
 }
 
 
-#line 344 "snapz.vala"
+#line 345 "snapz.vala"
 int main (int argc, char ** argv) {
-#line 344 "snapz.vala"
+#line 345 "snapz.vala"
 	g_type_init ();
-#line 344 "snapz.vala"
+#line 345 "snapz.vala"
 	return _main (argv, argc);
-#line 1059 "snapz.c"
+#line 1061 "snapz.c"
 }
 
 
