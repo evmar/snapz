@@ -3,7 +3,8 @@
 
 using Gdk;
 using Gtk;
-
+using Json;
+using Soup;
 
 Gdk.Pixbuf* pixbuf_from_surface(Cairo.ImageSurface surface) {
     // Gdk.Pixbuf wants 24-bit RGB, but the Cairo RGB24 format
@@ -263,6 +264,65 @@ class ShotCanvas : Gtk.AspectFrame {
     private Gdk.Point sel_end;
 }
 
+
+// Read a file to a buffer.  Man, this is ugly.
+void read_file(string path, out uint8[] content) {
+    content = new uint8[16 << 10];
+    size_t total_len = 0;
+    size_t len = 0;
+    var file = FileStream.open(path, "rb");
+    do {
+        uint8 buf[4096];
+        len = file.read(buf);
+        if (len > 0) {
+            if (total_len + len > content.length)
+                content.resize(content.length * 2);
+            Memory.copy((uint8*)content + total_len, buf, len);
+            total_len += len;
+        }
+    } while (len > 0);
+    content.resize((int)total_len);
+}
+
+errordomain ImgurError {
+    FAIL
+}
+string imgur_parse_response(string response) throws ImgurError {
+    var parser = new Json.Parser();
+    try {
+        if (!parser.load_from_data(response))
+            throw new ImgurError.FAIL("Couldn't parse response");
+
+        var root = parser.get_root().get_object();
+        if (!root.has_member("rsp"))
+            throw new ImgurError.FAIL("No 'rsp' element in response");
+        var rsp = root.get_object_member("rsp");
+
+        if (!rsp.has_member("stat"))
+            throw new ImgurError.FAIL("No 'stat' element in response");
+        var stat = rsp.get_string_member("stat");
+
+        if (stat == "ok") {
+            var image = rsp.get_object_member("image");
+            if (!rsp.has_member("image"))
+                throw new ImgurError.FAIL("No 'image' element in response");
+            if (!image.has_member("original_image"))
+                throw new ImgurError.FAIL("No 'original_image' element in " +
+                                          "response");
+            var url = image.get_string_member("original_image");
+            return url;
+        }
+
+        if (!rsp.has_member("error_msg"))
+            throw new ImgurError.FAIL("No 'error_msg' in response");
+        throw new ImgurError.FAIL(rsp.get_string_member("error_msg"));
+    } catch (ImgurError e) {
+        throw e;
+    } catch (GLib.Error e) {
+        throw new ImgurError.FAIL("parser error: " + e.message);
+    }
+}
+
 // The main window, containing the canvas and buttons to operate on it.
 class SnapzWin : Gtk.Window {
     public SnapzWin(Gdk.Pixbuf shot) {
@@ -299,6 +359,11 @@ class SnapzWin : Gtk.Window {
                     button.set_sensitive(canvas.has_selection());
             });
 
+        var imgur_button = new Gtk.Button.with_mnemonic("_imgur");
+        imgur_button.clicked.connect(imgur_upload);
+        bbox.pack_end(imgur_button, false, false, 0);
+        bbox.set_child_secondary(imgur_button, true);
+
         var save_button = new Gtk.Button.with_mnemonic("_Save");
         save_button.clicked.connect(save);
         bbox.pack_end(save_button, false, false, 0);
@@ -328,6 +393,62 @@ class SnapzWin : Gtk.Window {
             }
         }
         dialog.destroy();
+    }
+
+    private void imgur_upload() {
+        uint8[] content = null;
+
+        // TODO: use Gdk.Pixbuf.save_to_buffer once I get a valac with
+        // the fixed bindings.
+        var path = "/tmp/imgur-upload.png";
+        try {
+            canvas.save(path);
+            read_file(path, out content);
+        } catch (GLib.Error e) {
+            // XXX alert
+            return;
+        } finally {
+            FileUtils.unlink(path);
+        }
+
+        var session = new Soup.SessionSync();
+        var message = Soup.form_request_new(
+            "POST",
+            "http://imgur.com/api/upload.json",
+            "key", "83b56669cd32cbd97fd604ecc8418037",
+            "image", Base64.encode(content),
+            null);
+
+        try {
+            var status = session.send_message(message);
+            if (status != 200)
+                throw new ImgurError.FAIL("HTTP status " + status.to_string());
+            var response = message.response_body.flatten().data;
+            var url = imgur_parse_response(response);
+            var dlg = new Gtk.MessageDialog.with_markup(
+                this,
+                Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                Gtk.MessageType.INFO,
+                Gtk.ButtonsType.OK,
+                "<tt>%s</tt>", url);
+            dlg.set_title("Upload Success");
+            dlg.response.connect(() => {
+                    dlg.destroy();
+                });
+            dlg.run();
+        } catch (ImgurError e) {
+            var dlg = new Gtk.MessageDialog(
+                this,
+                Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                Gtk.MessageType.ERROR,
+                Gtk.ButtonsType.OK,
+                "%s", e.message);
+            dlg.set_title("Upload Error");
+            dlg.response.connect(() => {
+                    dlg.destroy();
+                });
+            dlg.run();
+        }
     }
 
     // The canvas widget.
