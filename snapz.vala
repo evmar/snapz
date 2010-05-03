@@ -68,6 +68,7 @@ class ShotCanvas : Gtk.AspectFrame {
                 clamp_point(ref sel_start);
                 sel_end = sel_start;
                 selection_changed();
+                return true;
             });
         canvas.motion_notify_event.connect((event) => {
                 sel_end = canvas_to_image(Gdk.Point() {
@@ -75,6 +76,7 @@ class ShotCanvas : Gtk.AspectFrame {
                     });
                 clamp_point(ref sel_end);
                 selection_changed();
+                return true;
             });
         canvas.button_release_event.connect((event) => {
                 sel_end = canvas_to_image(Gdk.Point() {
@@ -96,6 +98,7 @@ class ShotCanvas : Gtk.AspectFrame {
                     }
                 }
                 selection_changed();
+                return true;
             });
 
         canvas.expose_event.connect(draw);
