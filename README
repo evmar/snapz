@@ -1,0 +1,8 @@
+To build:
+apt-get install valac
+apt-get install libgtk2.0-dev
+apt-get install libjson-glib-dev
+apt-get install libsoup2.4-dev
+
+make snapz
+./snapz
